@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>토너먼트 대진표 (링크 공유형)</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .status-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-small {
+            background-color: #64748b;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+        .btn-small:hover { background-color: #475569; }
+        .btn-small.active { background-color: #10b981; }
+        .btn-small.active:hover { background-color: #059669; }
+        .btn-share { background-color: #f59e0b; }
+        .btn-share:hover { background-color: #d97706; }
+        
+        .setup-container {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 400px;
+            display: none; 
+        }
+        .setup-container.active { display: block; }
+        
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            resize: none;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        button.main-btn {
+            flex: 1;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        button.main-btn:hover { background-color: var(--primary-hover); }
+        button.main-btn.danger { background-color: #ef4444; }
+        button.main-btn.danger:hover { background-color: #dc2626; }
+        
+        .bracket-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            padding: 20px 0;
+        }
+        .bracket-container {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            min-width: max-content;
+        }
+        .round {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            gap: 20px;
+        }
+        .match {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 160px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .player {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+        
+        .admin-mode .player { cursor: pointer; }
+        .admin-mode .player:hover:not(.bye) { background-color: #eff6ff; }
+        
+        .player:last-child { border-bottom: none; }
+        .player.winner { 
+            background-color: var(--primary); 
+            color: white; 
+            font-weight: bold; 
+        }
+        .player.bye { 
+            color: #94a3b8; 
+            background-color: #f1f5f9;
+        }
+        .admin-mode .player.bye { cursor: not-allowed; }
+        
+        .champion-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .champion-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #eab308;
+            margin-bottom: 10px;
+        }
+        .champion-name {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🏆 토너먼트 대진표</h1>
+        <div class="status-bar">
+            <button id="shareBtn" class="btn-small btn-share" onclick="copyShareLink()">🔗 다른 기기로 대진표 내보내기</button>
+            <button id="adminBtn" class="btn-small" onclick="toggleAdmin()">🔒 관리자 모드 켜기</button>
+        </div>
+    </div>
+
+    <div class="setup-container" id="setupContainer">
+        <textarea id="participants" placeholder="참가자 이름을 줄바꿈(엔터)으로 구분해서 입력하세요.&#13;&#10;예:&#13;&#10;김철수&#13;&#10;이영희"></textarea>
+        <div class="btn-group">
+            <button class="main-btn" onclick="generateBracket()">대진표 생성 (기존 삭제)</button>
+            <button class="main-btn danger" onclick="resetBracket()">모두 지우기</button>
+        </div>
+    </div>
+
+    <div class="bracket-wrapper">
+        <div class="bracket-container" id="bracket-container">
+            <!-- 대진표가 여기에 그려집니다 -->
+        </div>
+    </div>
+
+    <script>
+        let matches = [];
+        let numRounds = 0;
+        let isAdmin = false;
+
+        window.onload = () => {
+            // 주소창에 대진표 데이터가 포함되어 있는지 확인
+            const urlParams = new URLSearchParams(window.location.search);
+            const dataParam = urlParams.get('d');
+
+            if (dataParam) {
+                try {
+                    // 주소창의 압축 데이터를 해제해서 불러옴
+                    const decodedData = JSON.parse(decodeURIComponent(atob(dataParam)));
+                    matches = decodedData.matches;
+                    numRounds = decodedData.numRounds;
+                    localStorage.setItem('tournament_link_data', JSON.stringify(decodedData));
+                } catch (e) {
+                    console.error("데이터 파싱 실패", e);
+                    loadFromLocal();
+                }
+            } else {
+                loadFromLocal();
+            }
+            render();
+        };
+
+        function loadFromLocal() {
+            const saved = localStorage.getItem('tournament_link_data');
+            if (saved) {
+                const data = JSON.parse(saved);
+                matches = data.matches;
+                numRounds = data.numRounds;
+            }
+        }
+
+        function saveToLocal() {
+            const data = { matches, numRounds };
+            localStorage.setItem('tournament_link_data', JSON.stringify(data));
+        }
+
+        // 현재 대진표 상태를 주소창 링크로 만들어 복사하는 함수
+        function copyShareLink() {
+            if (matches.length === 0) {
+                alert("생성된 대진표가 없습니다. 먼저 대진표를 만들어주세요.");
+                return;
+            }
+            const dataStr = btoa(encodeURIComponent(JSON.stringify({ matches, numRounds })));
+            const shareUrl = `${window.location.origin}${window.location.pathname}?d=${dataStr}`;
+            
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                alert("현재 대진표 상태가 담긴 주소가 복사되었습니다!\n이 주소를 카톡이나 다른 기기에 전달해서 열면 똑같이 보입니다.");
+            }).catch(err => {
+                // 구형 브라우저 대응용 임시 복사 기능
+                const t = document.createElement("textarea");
+                document.body.appendChild(t);
+                t.value = shareUrl;
+                t.select();
+                document.execCommand('copy');
+                document.body.removeChild(t);
+                alert("현재 대진표 상태가 담긴 주소가 복사되었습니다!");
+            });
+        }
+
+        function toggleAdmin() {
+            if (isAdmin) {
+                isAdmin = false;
+                updateAdminUI();
+            } else {
+                const pwd = prompt("대진표를 수정하려면 관리자 비밀번호를 입력하세요:");
+                if (!pwd) return;
+                
+                if (btoa(pwd) === 'MTI3MQ==') {
+                    isAdmin = true;
+                    updateAdminUI();
+                } else {
+                    alert("비밀번호가 일치하지 않습니다.");
+                }
+            }
+        }
+
+        function updateAdminUI() {
+            const btn = document.getElementById('adminBtn');
+            const setup = document.getElementById('setupContainer');
+            const container = document.getElementById('bracket-container');
+
+            if (isAdmin) {
+                btn.innerText = "🔓 관리자 모드 끄기";
+                btn.classList.add('active');
+                setup.classList.add('active');
+                container.classList.add('admin-mode');
+            } else {
+                btn.innerText = "🔒 관리자 모드 켜기";
+                btn.classList.remove('active');
+                setup.classList.remove('active');
+                container.classList.remove('admin-mode');
+            }
+        }
+
+        function generateBracket() {
+            const input = document.getElementById('participants').value;
+            let players = input.split('\n').map(p => p.trim()).filter(p => p.length > 0);
+
+            if (players.length < 2 || players.length > 10) {
+                alert("참가자는 최소 2명에서 최대 10명까지 가능합니다.");
+                return;
+            }
+
+            players.sort(() => Math.random() - 0.5);
+
+            let p = Math.pow(2, Math.ceil(Math.log2(players.length)));
+            let numMatchesFirstRound = p / 2;
+            numRounds = Math.log2(p);
+            matches = [];
+
+            let round0 = Array(numMatchesFirstRound).fill(null).map(() => ({ p1: null, p2: null, winner: null }));
+            let pIdx = 0;
+            
+            for (let i = 0; i < numMatchesFirstRound; i++) {
+                if (pIdx < players.length) round0[i].p1 = players[pIdx++];
+            }
+            for (let i = 0; i < numMatchesFirstRound; i++) {
+                if (pIdx < players.length) round0[i].p2 = players[pIdx++];
+            }
+
+            for (let i = 0; i < numMatchesFirstRound; i++) {
+                if (!round0[i].p2) { round0[i].winner = 1; }
+            }
+            matches.push(round0);
+
+            for (let r = 1; r < numRounds; r++) {
+                let round = [];
+                for (let i = 0; i < (numMatchesFirstRound / Math.pow(2, r)); i++) {
+                    round.push({ p1: null, p2: null, winner: null });
+                }
+                matches.push(round);
+            }
+
+            updateBracket();
+            saveToLocal();
+            render();
+        }
+
+        function setWinner(r, m, playerIndex) {
+            if (!isAdmin) return;
+
+            let match = matches[r][m];
+            if (playerIndex === 1 && !match.p1) return;
+            if (playerIndex === 2 && !match.p2) return;
+            if (!match.p2 && playerIndex === 2) return;
+
+            match.winner = playerIndex;
+            updateBracket();
+            saveToLocal();
+            render();
+        }
+
+        function updateBracket() {
+            for (let r = 0; r < numRounds - 1; r++) {
+                for (let m = 0; m < matches[r].length; m++) {
+                    let nextMatchIndex = Math.floor(m / 2);
+                    let isP1 = (m % 2 === 0);
+                    
+                    let winnerName = null;
+                    if (matches[r][m].winner === 1) winnerName = matches[r][m].p1;
+                    if (matches[r][m].winner === 2) winnerName = matches[r][m].p2;
+
+                    let nextMatch = matches[r + 1][nextMatchIndex];
+
+                    if (isP1) {
+                        if (nextMatch.p1 !== winnerName) {
+                            nextMatch.p1 = winnerName;
+                            nextMatch.winner = null;
+                        }
+                    } else {
+                        if (nextMatch.p2 !== winnerName) {
+                            nextMatch.p2 = winnerName;
+                            nextMatch.winner = null;
+                        }
+                    }
+                }
+            }
+        }
+
+        function render() {
+            const container = document.getElementById('bracket-container');
+            container.innerHTML = '';
+
+            if (matches.length === 0) return;
+
+            matches.forEach((round, rIndex) => {
+                const roundDiv = document.createElement('div');
+                roundDiv.className = 'round';
+
+                round.forEach((match, mIndex) => {
+                    const matchDiv = document.createElement('div');
+                    matchDiv.className = 'match';
+
+                    const p1Div = document.createElement('div');
+                    p1Div.className = `player ${match.winner === 1 ? 'winner' : ''} ${!match.p1 ? 'bye' : ''}`;
+                    p1Div.innerText = match.p1 ? match.p1 : (rIndex === 0 ? '부전승' : 'TBD');
+                    p1Div.onclick = () => setWinner(rIndex, mIndex, 1);
+
+                    const p2Div = document.createElement('div');
+                    p2Div.className = `player ${match.winner === 2 ? 'winner' : ''} ${!match.p2 ? 'bye' : ''}`;
+                    p2Div.innerText = match.p2 ? match.p2 : (rIndex === 0 ? '부전승' : 'TBD');
+                    p2Div.onclick = () => setWinner(rIndex, mIndex, 2);
+
+                    matchDiv.appendChild(p1Div);
+                    matchDiv.appendChild(p2Div);
+                    roundDiv.appendChild(matchDiv);
+                });
+                container.appendChild(roundDiv);
+            });
+
+            const finalMatch = matches[numRounds - 1][0];
+            if (finalMatch && finalMatch.winner) {
+                const championName = finalMatch.winner === 1 ? finalMatch.p1 : finalMatch.p2;
+                const champDiv = document.createElement('div');
+                champDiv.className = 'champion-box';
+                champDiv.innerHTML = `
+                    <div class="champion-title">👑 우승</div>
+                    <div class="champion-name">${championName}</div>
+                `;
+                container.appendChild(champDiv);
+            }
+            
+            updateAdminUI();
+        }
+
+        function resetBracket() {
+            if (confirm("정말 모든 데이터를 삭제하시겠습니까?")) {
+                matches = [];
+                numRounds = 0;
+                localStorage.removeItem('tournament_link_data');
+                // 주소창 파라미터도 청소
+                window.history.pushState({}, document.title, window.location.pathname);
+                render();
+            }
+        }
+    </script>
+</body>
+</html>
